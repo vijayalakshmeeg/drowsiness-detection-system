@@ -1,0 +1,7 @@
+django
+pymysql
+opencv-python
+mediapipe
+pygame
+twilio
+numpy

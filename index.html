@@ -1,0 +1,405 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drowsiness Detection Dashboard</title>
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/all.min.css' %}" rel="stylesheet">
+    <script src="{% static 'js/chart.min.js' %}"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👁️</text></svg>">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .navbar {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+        }
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: #00d4ff !important;
+        }
+        .container-fluid {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header-title {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .header-title h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            border: 3px solid #667eea;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            background: #000;
+            aspect-ratio: 16/9;
+        }
+        .video-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            border: none;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin: 10px 0;
+            animation: pulse 2s infinite;
+        }
+        .status-badge.normal {
+            background-color: #28a745;
+            color: white;
+        }
+        .status-badge.drowsy {
+            background-color: #dc3545;
+            color: white;
+            animation: pulse-red 0.5s infinite;
+        }
+        .status-badge.yawn {
+            background-color: #ffc107;
+            color: black;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        @keyframes pulse-red {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .metric-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .alert-box {
+            border-left: 5px solid;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            display: none;
+        }
+        .alert-box.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .alert-box.danger {
+            background-color: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .alert-box.warning {
+            background-color: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .feature-list ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+        }
+        .feature-list li:before {
+            content: "✓";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+        .tabs {
+            margin-top: 20px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            padding: 20px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <span class="navbar-brand">
+                <i class="fas fa-eye"></i> DrowseGuard Pro
+            </span>
+            <div class="ms-auto text-white d-flex align-items-center gap-3">
+                <span><i class="fas fa-user-circle"></i> {{ request.user.username }}</span>
+                <span id="time" style="border-left: 1px solid rgba(255,255,255,0.3); padding-left: 15px;">00:00:00</span>
+                <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-light" style="border-radius: 50px; font-weight: bold;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="header-title">
+            <h1><i class="fas fa-car"></i> Drowsiness Detection Dashboard</h1>
+            <p>Advanced AI-Powered Driver Safety System</p>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="video-container">
+                        <img src="{% url 'video_feed' %}" alt="Live Video Feed" class="video-feed">
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-dashboard"></i> Real-Time Status
+                    </div>
+                    <div class="card-body">
+                        <div class="status-badge normal" id="statusBadge">✓ Alert - Monitoring</div>
+                        <div class="alert-box danger" id="drowsyAlert">
+                            <i class="fas fa-exclamation-circle"></i> <strong>Drowsiness Detected!</strong> Eyes have been closed.
+                        </div>
+                        <div class="alert-box warning" id="yawnAlert">
+                            <i class="fas fa-mouth"></i> <strong>Yawning Detected!</strong> Stay focused.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-bar"></i> Live Metrics
+                    </div>
+                    <div class="card-body">
+                        <div class="metric-box">
+                            <div class="metric-label">Eye Aspect Ratio (EAR)</div>
+                            <div class="metric-value" id="ear">0.35</div>
+                            <progress value="35" max="100" style="width: 100%; height: 8px;"></progress>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">Mouth Aspect Ratio (MAR)</div>
+                            <div class="metric-value" id="mar">0.25</div>
+                            <progress value="25" max="100" style="width: 100%; height: 8px;"></progress>
+                        </div>
+                        <div class="stats-grid">
+                            <div style="text-align: center;">
+                                <div style="font-size: 2rem; font-weight: bold; color: #667eea;" id="drowsyCount">0</div>
+                                <small>Drowsy Episodes</small>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 2rem; font-weight: bold; color: #ffc107;" id="yawnCount">0</div>
+                                <small>Yawns Detected</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-info-circle"></i> Information & Features
+                    </div>
+                    <div class="card-body">
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#features">Features</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#instructions">Instructions</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#settings">Settings</a>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content mt-3">
+                            <div id="features" class="tab-pane fade show active">
+                                <div class="feature-list">
+                                    <ul>
+                                        <li><strong>AI-Powered Detection:</strong> Uses MediaPipe for accurate facial landmark detection</li>
+                                        <li><strong>Real-time Monitoring:</strong> Continuous eye and mouth analysis</li>
+                                        <li><strong>Audio Alerts:</strong> Immediate beep notifications for drowsiness/yawning</li>
+                                        <li><strong>SMS Notifications:</strong> Alert contacts after prolonged drowsiness (Twilio enabled)</li>
+                                        <li><strong>Event Logging:</strong> Complete history of detected events</li>
+                                        <li><strong>Dashboard Analytics:</strong> Visual metrics and trends</li>
+                                        <li><strong>Mobile Responsive:</strong> Access from any device</li>
+                                        <li><strong>Privacy First:</strong> Processing happens locally on your device</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div id="instructions" class="tab-pane fade">
+                                <h5>How to Use:</h5>
+                                <ol style="margin-top: 15px;">
+                                    <li>Position your camera to capture your face clearly</li>
+                                    <li>Ensure adequate lighting for best accuracy</li>
+                                    <li>The system will immediately start monitoring</li>
+                                    <li>Red alerts = Drowsiness detected (eyes closed)</li>
+                                    <li>Yellow alerts = Yawning detected</li>
+                                    <li>If drowsy for 15+ seconds, SMS alert will be sent (if configured)</li>
+                                    <li>Keep the browser window open for continuous monitoring</li>
+                                </ol>
+                            </div>
+                            <div id="settings" class="tab-pane fade">
+                                <h5>Configuration:</h5>
+                                <div style="margin-top: 15px;">
+                                    <p><strong>To enable SMS alerts:</strong></p>
+                                    <ol>
+                                        <li>Sign up at <a href="https://www.twilio.com" target="_blank">Twilio.com</a></li>
+                                        <li>Get your Account SID and Auth Token</li>
+                                        <li>Edit app.py and fill in the credentials</li>
+                                        <li>Configure recipient phone number (must be verified)</li>
+                                        <li>Restart the application</li>
+                                    </ol>
+                                    <p class="mt-3"><small class="text-muted">Note: Requires valid Twilio account credentials</small></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><i class="fas fa-heart" style="color: #ff6b6b;"></i> Drowsiness Detection System | Built with Flask, OpenCV & MediaPipe | 2026</p>
+        </div>
+    </div>
+
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+
+    <script>
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('time').textContent = now.toLocaleTimeString();
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Fetch real stats from the backend every 2 seconds
+        function fetchStats() {
+            fetch('/stats')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('ear').textContent = data.ear.toFixed(2);
+                    document.getElementById('mar').textContent = data.mar.toFixed(2);
+                    document.getElementById('drowsyCount').textContent = data.drowsy_count;
+                    document.getElementById('yawnCount').textContent = data.yawn_count;
+
+                    // Update progress bars
+                    document.querySelectorAll('progress')[0].value = Math.round(data.ear * 100);
+                    document.querySelectorAll('progress')[1].value = Math.round(data.mar * 100);
+
+                    if (data.is_drowsy) showAlert('drowsy');
+                    if (data.is_yawning) showAlert('yawn');
+                })
+                .catch(() => {}); // silently ignore if server not ready yet
+        }
+        setInterval(fetchStats, 2000);
+        fetchStats();
+
+        function showAlert(type) {
+            if (type === 'drowsy') {
+                const alert = document.getElementById('drowsyAlert');
+                alert.classList.add('show');
+                document.getElementById('statusBadge').className = 'status-badge drowsy';
+                document.getElementById('statusBadge').textContent = '⚠ Drowsiness Alert!';
+                setTimeout(() => {
+                    alert.classList.remove('show');
+                    document.getElementById('statusBadge').className = 'status-badge normal';
+                    document.getElementById('statusBadge').textContent = '✓ Alert - Monitoring';
+                }, 3000);
+            } else if (type === 'yawn') {
+                const alert = document.getElementById('yawnAlert');
+                alert.classList.add('show');
+                setTimeout(() => {
+                    alert.classList.remove('show');
+                }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - DrowseGuard Pro</title>
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/all.min.css' %}" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .auth-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .auth-title {
+            color: #764ba2;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .form-control {
+            border-radius: 50px;
+            padding: 10px 20px;
+            margin-bottom: 15px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50px;
+            width: 100%;
+            padding: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+        .btn-primary:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transform: translateY(-2px);
+        }
+        .auth-links {
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+        .auth-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <h2 class="auth-title"><i class="fas fa-eye"></i> Welcome Back</h2>
+        <p class="text-muted mb-4">Login to your DrowseGuard Dashboard</p>
+        
+        <form method="post">
+            {% csrf_token %}
+            {% if form.errors %}
+                <div class="alert alert-danger" style="border-radius: 10px; font-size: 0.9rem;">
+                    Invalid username or password.
+                </div>
+            {% endif %}
+            
+            <input type="text" name="username" class="form-control" placeholder="Username" required autofocus>
+            <input type="password" name="password" class="form-control" placeholder="Password" required>
+            
+            <button type="submit" class="btn btn-primary mt-3">Log In</button>
+        </form>
+        
+        <div class="auth-links">
+            <p>Don't have an account? <a href="{% url 'register' %}">Sign Up</a></p>
+        </div>
+    </div>
+</body>
+</html>
